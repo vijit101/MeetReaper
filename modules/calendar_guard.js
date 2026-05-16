@@ -12,78 +12,85 @@ function getNodeEmail(node) {
 }
 
 /**
- * Returns the email from a node only if it is a confirmed guest chip.
- * A confirmed guest chip always has a sibling remove/delete button.
- * This filters out hover cards, autocomplete suggestions, and organizer cards.
- * @param {Element} node
- * @returns {string|null}
+ * Returns the guest list tree container element.
+ * Google Calendar renders all guest chips inside [aria-label="Guests invited to this event."]
+ * @returns {Element|null}
  */
-function getChipEmail(node) {
-  const email = getNodeEmail(node);
-  if (!email) return null;
-  // Walk up to find the chip's list item container
-  const chip = node.closest('li, [role="listitem"], [data-chip-id]') || node.parentElement;
-  // A real confirmed chip has a remove/delete button
-  const hasRemoveBtn = chip?.querySelector(
-    '[aria-label*="remove" i], [aria-label*="delete" i], [data-remove], [jsname]'
-  ) !== null;
-  // Also accept if the chip itself has aria-label containing 'remove'
-  const chipAriaLabel = chip?.getAttribute('aria-label') || '';
-  const isConfirmedChip = hasRemoveBtn || /remove/i.test(chipAriaLabel);
-  return isConfirmedChip ? email : null;
+function getGuestTree() {
+  return document.querySelector('[aria-label="Guests invited to this event."]');
 }
 
 /**
- * Returns all confirmed guest chip emails currently in the DOM.
+ * Returns emails only from confirmed guest chips inside the guest list tree.
+ * Excludes the organizer chip (id=xDtlDlgOrg) which is always pre-present.
  * @returns {string[]}
  */
-function getConfirmedGuestEmails() {
-  return [...document.querySelectorAll('[data-email], [email], [data-hovercard-id]')]
-    .map(getChipEmail)
+function getGuestEmails() {
+  const tree = getGuestTree();
+  if (!tree) return [];
+  return [...tree.querySelectorAll('[data-email]')]
+    .filter((node) => node.closest('#xDtlDlgOrg') === null) // exclude organizer
+    .map(getNodeEmail)
     .filter(Boolean);
 }
 
 /**
- * Checks if a given email is currently in the confirmed guest chip list.
+ * Checks if a given email is currently in the guest list (excluding organizer).
  * @param {string} email
  * @returns {boolean}
  */
 export function isEmailInDOM(email) {
-  return getConfirmedGuestEmails().includes(email);
+  return getGuestEmails().includes(email);
 }
 
 /**
- * Watches only confirmed guest chips (those with a remove button) for newly-added attendees.
- * This prevents false positives from hovercard links, suggestions, and the organizer chip.
+ * Watches the Google Calendar event editor for newly added guests.
+ *
+ * Strategy: Run three priming scans at 500ms, 1500ms, and 2500ms to silently
+ * absorb ALL pre-existing email attributes (organizer chip, existing guests,
+ * hover cards, etc). Only AFTER 2500ms does the MutationObserver start
+ * reporting new emails. This eliminates false-positives on page load.
+ *
  * @param {Function} onAttendeeAdded - Callback called with the attendee email.
  * @returns {Function} A function to disconnect the observer.
  */
 export function observeAttendeeList(onAttendeeAdded) {
   const seenEmails = new Set();
   let scanTimeout = null;
+  let primingDone = false;
 
-  const scan = (isPriming = false) => {
+  // Absorb every guest email currently in the list (silently).
+  const prime = () => {
+    getGuestEmails().forEach((email) => seenEmails.add(email));
+  };
+
+  // Check for new guest emails not in the primed baseline.
+  const scan = () => {
     scanTimeout = null;
-    const emails = getConfirmedGuestEmails();
-    for (const email of emails) {
+    if (!primingDone) return;
+    for (const email of getGuestEmails()) {
       if (seenEmails.has(email)) continue;
       seenEmails.add(email);
-      if (isPriming) continue; // silently baseline existing guests
       onAttendeeAdded(email);
     }
   };
 
   const debouncedScan = () => {
     if (scanTimeout) clearTimeout(scanTimeout);
-    scanTimeout = setTimeout(() => scan(false), 400);
+    scanTimeout = setTimeout(scan, 400);
   };
 
   const observer = new MutationObserver(debouncedScan);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  // Prime the baseline after a delay so all existing chips (organizer, pre-existing
-  // guests) are rendered and silently absorbed before we start reporting new ones.
-  setTimeout(() => scan(true), 1500);
+  // Three priming passes to catch progressively lazy-rendered chips.
+  // The guest tree itself may not exist on initial load.
+  setTimeout(prime, 500);
+  setTimeout(prime, 1500);
+  setTimeout(() => {
+    prime();
+    primingDone = true; // Only start reporting after all priming passes complete.
+  }, 2500);
 
   return () => {
     if (scanTimeout) clearTimeout(scanTimeout);

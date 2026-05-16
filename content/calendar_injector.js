@@ -14,13 +14,14 @@
   let promptInFlight = false;
 
   /**
-   * Finds Google Calendar's event description contenteditable field.
+   * Finds Google Calendar's open description contenteditable field.
+   * Selector sourced from real Calendar DOM: role=textbox + aria-label + contenteditable.
    * @returns {HTMLElement|null}
    */
   const findDescriptionField = () =>
-    document.querySelector('[aria-label="Description"]') ||
-    document.querySelector('[data-tab-id="description"] [contenteditable]') ||
-    document.querySelector('[contenteditable][aria-multiline="true"]');
+    document.querySelector('[role="textbox"][aria-label="Add description"][contenteditable="true"]') ||
+    document.querySelector('#xDescIn [contenteditable="true"]') ||
+    document.querySelector('.hj99tb.editable[contenteditable="true"]');
 
   /**
    * Fires the full mouse event sequence on an element so React's synthetic
@@ -34,13 +35,18 @@
   };
 
   /**
-   * Finds the 'Add description' placeholder button and clicks it to open the field.
-   * @returns {boolean} True if the button was found and clicked.
+   * Finds and clicks the 'Add description' collapsed button to open the description field.
+   * Uses jsname="OXFAed" — the exact jsname on Google Calendar's description section container.
+   * @returns {boolean}
    */
   const openDescriptionField = () => {
-    const btn = [...document.querySelectorAll('button, [role="button"], [contenteditable="false"]')].find(
-      (el) => /add description/i.test(el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.textContent || ''),
-    );
+    // Primary: target description section by its fixed jsname attribute
+    const btn =
+      document.querySelector('[jsname="OXFAed"] button') ||
+      document.querySelector('[jsname="Zqjuqb"] button') ||
+      [...document.querySelectorAll('button')].find((el) =>
+        /add description/i.test(el.textContent || el.getAttribute('aria-label') || ''),
+      );
     if (btn) { reactClick(btn); return true; }
     return false;
   };
