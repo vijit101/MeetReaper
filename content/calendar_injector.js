@@ -23,14 +23,25 @@
     document.querySelector('[contenteditable][aria-multiline="true"]');
 
   /**
+   * Fires the full mouse event sequence on an element so React's synthetic
+   * event system registers it as a real user click.
+   * @param {HTMLElement} el
+   */
+  const reactClick = (el) => {
+    ['mousedown', 'mouseup', 'click'].forEach((type) =>
+      el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true })),
+    );
+  };
+
+  /**
    * Finds the 'Add description' placeholder button and clicks it to open the field.
    * @returns {boolean} True if the button was found and clicked.
    */
   const openDescriptionField = () => {
-    const btn = [...document.querySelectorAll('button, [role="button"]')].find((el) =>
-      /add description/i.test(el.getAttribute('aria-label') || el.textContent || ''),
+    const btn = [...document.querySelectorAll('button, [role="button"], [contenteditable="false"]')].find(
+      (el) => /add description/i.test(el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.textContent || ''),
     );
-    if (btn) { btn.click(); return true; }
+    if (btn) { reactClick(btn); return true; }
     return false;
   };
 
