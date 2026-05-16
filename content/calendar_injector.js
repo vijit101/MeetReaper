@@ -35,74 +35,79 @@
   };
 
   /**
-   * Finds and clicks the 'Add description' collapsed button to open the description field.
-   * Uses jsname="OXFAed" — the exact jsname on Google Calendar's description section container.
-   * @returns {boolean}
+   * Expands a Google Calendar collapsible section only if currently collapsed.
+   * Checks aria-expanded="false" before clicking to avoid toggling open sections shut.
+   * @param {string} jsname - jsname of the button's parent wrapper element.
    */
-  const openDescriptionField = () => {
-    // Primary: target description section by its fixed jsname attribute
-    const btn =
-      document.querySelector('[jsname="OXFAed"] button') ||
-      document.querySelector('[jsname="Zqjuqb"] button') ||
-      [...document.querySelectorAll('button')].find((el) =>
-        /add description/i.test(el.textContent || el.getAttribute('aria-label') || ''),
-      );
-    if (btn) { reactClick(btn); return true; }
+  const expandIfCollapsed = (jsname) => {
+    const btn = document.querySelector(`[jsname="${jsname}"] button`);
+    if (btn && btn.getAttribute('aria-expanded') === 'false') {
+      reactClick(btn);
+      return true;
+    }
     return false;
   };
 
   /**
-   * Polls for the description contenteditable field to appear in the DOM.
-   * @param {number} [timeoutMs=3000]
-   * @returns {Promise<HTMLElement|null>}
+   * Injects a text line into the open description contenteditable.
+   * Uses execCommand so Google Calendar's native `input` handler (q3884e) fires
+   * and syncs the value to its internal model.
+   * @param {HTMLElement} field - The contenteditable element.
+   * @param {string} line - The text line to append.
    */
-  const waitForDescriptionField = (timeoutMs = 3000) =>
-    new Promise((resolve) => {
-      const start = Date.now();
-      const check = () => {
-        const field = findDescriptionField();
-        if (field) return resolve(field);
-        if (Date.now() - start > timeoutMs) return resolve(null);
-        setTimeout(check, 100);
-      };
-      check();
-    });
-
-  /**
-   * Appends a reason line to the Calendar event description field via DOM injection.
-   * Automatically opens the description field if it hasn't been clicked yet.
-   * @param {string} email - The attendee email.
-   * @param {string} reason - The reason they were added.
-   * @returns {Promise<void>}
-   */
-  const appendReasonToDescription = async (email, reason) => {
-    let field = findDescriptionField();
-    if (!field) {
-      const clicked = openDescriptionField();
-      if (!clicked) {
-        console.warn('[MeetReaper] Could not find or open description field.');
-        return;
-      }
-      field = await waitForDescriptionField();
-      if (!field) {
-        console.warn('[MeetReaper] Description field did not appear after clicking.');
-        return;
-      }
-    }
-    const line = `${email} - ${reason}`;
-    const currentText = field.innerText.trim();
-    const separator = currentText ? '\n' : '';
-    // Move cursor to end and insert text
+  const injectIntoField = (field, line) => {
+    const hasContent = field.innerText.trim().length > 0;
     field.focus();
-    const sel = window.getSelection();
     const range = document.createRange();
     range.selectNodeContents(field);
     range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    // Use execCommand so Google Calendar registers the change as user input
-    document.execCommand('insertText', false, `${separator}${line}`);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('insertText', false, hasContent ? `\n${line}` : line);
   };
+
+  /**
+   * Appends a reason line to the Calendar event description field.
+   *
+   * Strategy: "queue and watch"
+   *   1. Attempt to programmatically open the description section (fire-and-forget).
+   *   2. Immediately check if the field is already in the DOM — inject if so.
+   *   3. If not, a MutationObserver watches the DOM and injects the moment the
+   *      contenteditable appears, regardless of whether it was opened by our click
+   *      or by the user manually. This fully bypasses lazy loading.
+   *
+   * @param {string} email - The attendee email.
+   * @param {string} reason - The reason they were added.
+   */
+  const appendReasonToDescription = (email, reason) => {
+    const line = `${email} - ${reason}`;
+
+    // Attempt to open the description field — fire and forget, don't await.
+    expandIfCollapsed('OXFAed');
+    setTimeout(() => expandIfCollapsed('Zqjuqb'), 350);
+
+    // Try to inject immediately in case field is already open.
+    const existing = findDescriptionField();
+    if (existing) {
+      injectIntoField(existing, line);
+      return;
+    }
+
+    // Field not open yet — watch for it to appear via lazy loading or manual click.
+    const deadline = Date.now() + 15000; // up to 15s window
+    const observer = new MutationObserver(() => {
+      const field = findDescriptionField();
+      if (field) {
+        observer.disconnect();
+        injectIntoField(field, line);
+      } else if (Date.now() > deadline) {
+        observer.disconnect();
+        console.warn('[MeetReaper] Description field did not appear within 15s.');
+      }
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  };
+
 
   /**
    * Shows a brief toast notification.
@@ -132,11 +137,12 @@
     promptInFlight = true;
     calendarGuard.showPurposeModal(
       email,
-      async (record) => {
+      (record) => {
         calendarGuard.saveAttendeePurpose(record);
         calendarGuard.renderAttendeeBadge(record.email, record.purpose);
-        // Auto-open description field if needed, then inject reason
-        await appendReasonToDescription(record.email, record.purpose);
+        // Queue the reason for description injection — fires immediately if field
+        // is already open, otherwise waits via MutationObserver (bypass lazy load).
+        appendReasonToDescription(record.email, record.purpose);
         showToast(`Reason saved for ${record.email}`, 'success');
         queuedEmails.delete(record.email);
         promptInFlight = false;
