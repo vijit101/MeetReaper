@@ -67,6 +67,25 @@
   };
 
   /**
+   * Adds a line once, then verifies Calendar kept it after the editor settles.
+   * The first write can be lost while Calendar is still mounting the newly-opened
+   * description editor, so retry only when the exact line is still missing.
+   * @param {HTMLElement} field
+   * @param {string} line
+   */
+  const injectIntoFieldWithRetry = (field, line) => {
+    injectIntoField(field, line);
+    setTimeout(() => {
+      const liveField = findDescriptionField();
+      if (!liveField) return;
+      const lines = liveField.innerText.split('\n').map((value) => value.trim());
+      if (!lines.includes(line)) {
+        injectIntoField(liveField, line);
+      }
+    }, 500);
+  };
+
+  /**
    * Appends a reason line to the Calendar event description field.
    *
    * Strategy: "queue and watch"
@@ -89,7 +108,7 @@
     // Try to inject immediately in case field is already open.
     const existing = findDescriptionField();
     if (existing) {
-      injectIntoField(existing, line);
+      injectIntoFieldWithRetry(existing, line);
       return;
     }
 
@@ -99,7 +118,7 @@
       const field = findDescriptionField();
       if (field) {
         observer.disconnect();
-        injectIntoField(field, line);
+        injectIntoFieldWithRetry(field, line);
       } else if (Date.now() > deadline) {
         observer.disconnect();
         console.warn('[MeetReaper] Description field did not appear within 15s.');
@@ -201,4 +220,3 @@
 
   window.addEventListener('beforeunload', calendarGuard.clearAttendeeRecords);
 })();
-
