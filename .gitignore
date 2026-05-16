@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local secrets / environment
+.env
+.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Build / package artifacts
+dist/
+build/
+*.zip
+*.crx
+*.pem
+
+# Dependencies, if tooling is added later
+node_modules/

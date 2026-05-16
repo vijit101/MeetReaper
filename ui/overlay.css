@@ -1,0 +1,200 @@
+:root {
+  --mr-ink: #0b0d10;
+  --mr-panel: rgba(16, 18, 23, 0.9);
+  --mr-panel-strong: rgba(20, 22, 28, 0.96);
+  --mr-line: rgba(241, 196, 92, 0.18);
+  --mr-line-strong: rgba(241, 196, 92, 0.42);
+  --mr-text: #f5f1e8;
+  --mr-muted: #aaa397;
+  --mr-gold: #d7a449;
+  --mr-gold-bright: #f0c36a;
+  --mr-danger: #e35d4f;
+  --mr-success: #83b88d;
+}
+
+.meetreaper-overlay,
+.meetreaper-card,
+.meetreaper-modal,
+.meetreaper-toast {
+  color: var(--mr-text);
+  font-family: "Avenir Next", "Segoe UI", Inter, Arial, sans-serif;
+  letter-spacing: 0.01em;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.05), transparent 42%),
+    radial-gradient(circle at top right, rgba(215,164,73,0.14), transparent 34%),
+    var(--mr-panel);
+  border: 1px solid var(--mr-line);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.meetreaper-overlay::before,
+.meetreaper-card::before,
+.meetreaper-modal::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  border-radius: inherit;
+}
+
+.meetreaper-overlay {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 999999;
+  display: grid;
+  gap: 12px;
+  min-width: 300px;
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.meetreaper-time {
+  color: var(--mr-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.meetreaper-auth-note,
+.meetreaper-vote small {
+  color: var(--mr-muted);
+  font-size: 11px;
+}
+
+.meetreaper-overlay.is-overrun {
+  border-color: rgba(227, 93, 79, 0.55);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(227, 93, 79, 0.18),
+    0 0 28px rgba(227, 93, 79, 0.18);
+}
+
+.meetreaper-overlay button,
+.meetreaper-modal button,
+.meetreaper-card button {
+  border: 1px solid var(--mr-line-strong);
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: var(--mr-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(180deg, rgba(240,195,106,0.24), rgba(215,164,73,0.12)),
+    rgba(215,164,73,0.08);
+  transition: 160ms ease;
+}
+
+.meetreaper-overlay button:hover,
+.meetreaper-modal button:hover,
+.meetreaper-card button:hover {
+  border-color: rgba(240,195,106,0.72);
+  background:
+    linear-gradient(180deg, rgba(240,195,106,0.34), rgba(215,164,73,0.18)),
+    rgba(215,164,73,0.12);
+}
+
+.meetreaper-overlay button:disabled {
+  opacity: 0.46;
+}
+
+.meetreaper-vote {
+  display: grid;
+  gap: 7px;
+}
+
+.meetreaper-vote-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.meetreaper-vote-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--mr-gold), var(--mr-gold-bright));
+  box-shadow: 0 0 16px rgba(240, 195, 106, 0.35);
+}
+
+.meetreaper-modal {
+  position: fixed;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000000;
+  display: grid;
+  gap: 14px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 24px;
+  border-radius: 24px;
+}
+
+.meetreaper-modal strong,
+.meetreaper-card strong {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.meetreaper-modal p {
+  margin: 0 0 4px;
+  color: var(--mr-muted);
+}
+
+.meetreaper-card {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 999999;
+  display: grid;
+  gap: 12px;
+  width: 300px;
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.meetreaper-card select {
+  appearance: none;
+  padding: 11px 12px;
+  color: var(--mr-text);
+  border: 1px solid var(--mr-line);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.035);
+}
+
+.meetreaper-card label {
+  color: var(--mr-muted);
+  font-size: 12px;
+}
+
+.meetreaper-badge {
+  margin-left: 8px;
+  color: var(--mr-success);
+  font-size: 11px;
+}
+
+.meetreaper-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1000000;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 999px;
+}
+
+.meetreaper-toast[data-tone="success"] {
+  border-color: rgba(131, 184, 141, 0.42);
+}
+
+.meetreaper-toast[data-tone="error"] {
+  border-color: rgba(227, 93, 79, 0.5);
+}

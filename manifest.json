@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "MeetReaper",
+  "version": "1.0.0",
+  "description": "Kill meetings that kill your time.",
+  "permissions": ["storage", "alarms", "tabs", "scripting", "identity"],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "https://calendar.google.com/*",
+    "https://www.googleapis.com/*",
+    "https://gmail.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service_worker.js",
+    "type": "module"
+  },
+  "oauth2": {
+    "client_id": "REPLACE_WITH_YOUR_OAUTH_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+      "https://www.googleapis.com/auth/gmail.send"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["content/meet_injector.js"],
+      "css": ["ui/overlay.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://calendar.google.com/*"],
+      "js": ["content/calendar_injector.js"],
+      "css": ["ui/overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["modules/*.js", "utils/*.js"],
+      "matches": ["https://meet.google.com/*", "https://calendar.google.com/*"]
+    }
+  ],
+  "action": { "default_popup": "popup/popup.html" }
+}

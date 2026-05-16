@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      :root {
+        --ink: #0b0d10;
+        --panel: #111318;
+        --line: rgba(241, 196, 92, 0.18);
+        --line-strong: rgba(241, 196, 92, 0.42);
+        --text: #f5f1e8;
+        --muted: #aaa397;
+        --gold: #d7a449;
+      }
+      body {
+        width: 280px;
+        margin: 0;
+        padding: 18px;
+        color: var(--text);
+        font-family: "Avenir Next", "Segoe UI", Arial, sans-serif;
+        background:
+          radial-gradient(circle at top right, rgba(215,164,73,.16), transparent 34%),
+          linear-gradient(145deg, #171a20, var(--ink));
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: .04em;
+      }
+      .subtitle {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .panel {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255,255,255,.03);
+      }
+      label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin: 14px 0;
+        color: var(--text);
+        font-size: 13px;
+      }
+      input {
+        accent-color: var(--gold);
+      }
+      button {
+        width: 100%;
+        margin-top: 12px;
+        padding: 11px 14px;
+        color: var(--text);
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(240,195,106,.24), rgba(215,164,73,.10));
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      #auth-status {
+        min-height: 16px;
+        margin: 12px 2px 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>MeetReaper</h2>
+    <p class="subtitle">Discipline for meetings that drift.</p>
+    <section class="panel">
+      <label>Auto-Kill <input type="checkbox" data-setting="autoKillEnabled"></label>
+      <label>Waste Vote <input type="checkbox" data-setting="voteEnabled"></label>
+      <label>Invite Guard <input type="checkbox" data-setting="inviteGuardEnabled"></label>
+      <button id="connect-calendar">Connect Calendar</button>
+      <p id="auth-status"></p>
+    </section>
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
