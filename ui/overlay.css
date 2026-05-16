@@ -43,20 +43,77 @@
 
 .meetreaper-overlay {
   position: fixed;
-  top: 18px;
   right: 18px;
+  bottom: 90px;
   z-index: 999999;
   display: grid;
-  gap: 12px;
-  min-width: 300px;
-  padding: 16px;
+  gap: 14px;
+  width: 280px;
+  padding: 14px;
   border-radius: 20px;
 }
 
+.meetreaper-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--mr-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.meetreaper-overlay-header button {
+  padding: 6px 10px;
+  color: var(--mr-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  background: transparent;
+}
+
+.meetreaper-overlay-body {
+  display: grid;
+  gap: 12px;
+}
+
+.meetreaper-overlay.is-collapsed {
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.meetreaper-overlay-pill {
+  display: none;
+}
+
+.meetreaper-overlay.is-collapsed::before,
+.meetreaper-overlay.is-collapsed .meetreaper-overlay-body {
+  display: none;
+}
+
+.meetreaper-overlay.is-collapsed .meetreaper-overlay-pill {
+  display: block;
+}
+
 .meetreaper-time {
+  display: grid;
+  gap: 3px;
   color: var(--mr-text);
-  font-size: 13px;
-  font-weight: 500;
+}
+
+.meetreaper-time strong {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.meetreaper-time small {
+  color: var(--mr-muted);
+  font-size: 11px;
 }
 
 .meetreaper-auth-note,
@@ -98,6 +155,18 @@
   background:
     linear-gradient(180deg, rgba(240,195,106,0.34), rgba(215,164,73,0.18)),
     rgba(215,164,73,0.12);
+}
+
+.meetreaper-overlay .meetreaper-overlay-header button {
+  border-color: transparent;
+  color: var(--mr-muted);
+  background: transparent;
+}
+
+.meetreaper-overlay .meetreaper-overlay-header button:hover {
+  border-color: var(--mr-line);
+  color: var(--mr-text);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .meetreaper-overlay button:disabled {
@@ -158,13 +227,33 @@
   border-radius: 22px;
 }
 
-.meetreaper-card select {
+.meetreaper-card select,
+.meetreaper-input {
   appearance: none;
   padding: 11px 12px;
   color: var(--mr-text);
   border: 1px solid var(--mr-line);
   border-radius: 12px;
   background: rgba(255,255,255,0.035);
+}
+
+.meetreaper-input {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  line-height: 1.4;
+  outline: none;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.meetreaper-input::placeholder {
+  color: rgba(245, 241, 232, 0.42);
+}
+
+.meetreaper-input:focus {
+  border-color: rgba(240, 195, 106, 0.72);
+  background: rgba(255,255,255,0.055);
+  box-shadow: 0 0 0 3px rgba(215, 164, 73, 0.12);
 }
 
 .meetreaper-card label {

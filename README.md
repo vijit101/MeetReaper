@@ -1,73 +1,219 @@
 # MeetReaper
 
-MeetReaper is a small Chrome extension that helps meetings stay useful.
+MeetReaper is a Chrome extension that helps people make meetings shorter, clearer, and more useful.
 
-It does three main things:
+## The very simple story
 
-1. **Invite Guard**  
-   When you add people to a Google Calendar meeting, it asks why each person is needed.
+Imagine MeetReaper as a small robot helper for meetings:
 
-2. **Meeting Timer**  
-   When you join a Google Meet call, it can read the matching Calendar event and show how much time is left.
+1. **Before the meeting**  
+   When you add a person to Google Calendar, the robot asks:  
+   **“Why does this person need to come?”**
 
-3. **Vibe Check Vote**  
-   People in the meeting can vote with reactions:
-   - `👍` = this meeting is a waste
-   - `👎` = this meeting is worth it
+2. **During the meeting**  
+   The robot watches the meeting clock and shows how much time is left.
 
-   If more than half say it is a waste, MeetReaper can end the meeting.
+3. **If the meeting feels useless**  
+   People can vote:
+   - `👍` means “this meeting is a waste”
+   - `👎` means “this meeting is useful”
 
-## Very simple explanation
+4. **If the meeting goes too long, or enough people vote against it**  
+   MeetReaper can help end the meeting.
 
-Think of MeetReaper like a polite meeting helper:
+That is the whole idea.
 
-- Before a meeting, it asks: **“Why is this person invited?”**
-- During a meeting, it watches the clock.
-- If people think the meeting is not useful, they can vote.
-- If the meeting runs too long or enough people vote against it, MeetReaper helps close it.
+---
 
-## How the project starts
+## Where the app starts
 
-This is a Chrome extension, so the first file Chrome reads is:
+This is not a normal website with one `index.js` file.
+
+Because it is a Chrome extension, Chrome starts from:
 
 ```text
 manifest.json
 ```
 
-That file tells Chrome which parts to start:
+`manifest.json` is like the project’s **map**. It tells Chrome:
 
-| File | What it does |
+- what pages the extension can run on
+- which scripts to load
+- which permissions it needs
+
+From there, Chrome starts these main files:
+
+| File | Simple meaning |
 | --- | --- |
-| `background/service_worker.js` | Handles storage, alarms, Google Calendar lookup, Gmail sending, and shared messages |
-| `content/meet_injector.js` | Runs on Google Meet pages and shows the timer + voting UI |
-| `content/calendar_injector.js` | Runs on Google Calendar pages and asks the purpose of each newly added attendee |
-| `popup/popup.html` + `popup/popup.js` | Small extension popup for settings and Google authorization |
+| `background/service_worker.js` | The brain that keeps working in the background |
+| `content/calendar_injector.js` | The helper that runs inside Google Calendar |
+| `content/meet_injector.js` | The helper that runs inside Google Meet |
+| `popup/popup.html` + `popup/popup.js` | The tiny settings window when you click the extension icon |
 
-## How the logic works
+---
+
+## Big picture flow
 
 ```text
-Google Calendar
-  -> you add a guest
-  -> Invite Guard asks why they are needed
-  -> purpose is shown beside that guest
-
-Google Meet
-  -> MeetReaper checks the matching Calendar event
-  -> timer shows how much time is left
-  -> people can start a quick vote
-  -> if time is over or most people vote "waste", the meeting can end
+manifest.json
+  |
+  |-- starts background/service_worker.js
+  |
+  |-- on Google Calendar:
+  |     content/calendar_injector.js
+  |
+  |-- on Google Meet:
+        content/meet_injector.js
 ```
 
-## Main folders
+---
 
-| Folder | Purpose |
+## Google Calendar flow: adding guests
+
+```text
+You add a guest email
+  -> calendar_guard.js notices the new guest
+  -> calendar_injector.js puts that guest into a queue
+  -> calendar_guard.js shows the "Why is this person needed?" box
+  -> calendar_description.js writes the answer into the event description
+  -> toast_renderer.js shows "Reason saved"
+```
+
+### Files involved
+
+| File | Job |
 | --- | --- |
-| `background/` | Long-running extension logic |
-| `content/` | Scripts injected into Google Meet and Google Calendar |
-| `modules/` | Reusable logic such as timers, voting, storage, and calendar helpers |
-| `ui/` | Shared styles and UI fragments |
-| `popup/` | The small extension popup |
-| `utils/` | Small helper functions |
+| `content/calendar_injector.js` | Coordinates the whole Calendar flow |
+| `modules/calendar_guard.js` | Watches guests and shows the reason popup |
+| `modules/calendar_description.js` | Opens the description box and writes guest reasons into it |
+| `modules/toast_renderer.js` | Shows small success messages |
+
+### Why this is split
+
+Each file does one main job:
+
+- one file watches guests
+- one file edits the description box
+- one file shows messages
+- one file coordinates them
+
+That makes the code easier to read and safer to change.
+
+---
+
+## Google Meet flow: timer and voting
+
+```text
+You open a Google Meet call
+  -> meet_injector.js asks the background brain for meeting info
+  -> service_worker.js looks up the matching Calendar event
+  -> calendar_api.js gets the scheduled end time
+  -> overlay_renderer.js shows the timer on the Meet page
+
+If someone starts a vote:
+  -> vote_modal_renderer.js shows the vote popup
+  -> reaction_vote.js watches 👍 and 👎 reactions
+  -> overlay_renderer.js updates the vote bar
+  -> if enough people vote "waste", ejector.js helps end the call
+```
+
+### Files involved
+
+| File | Job |
+| --- | --- |
+| `content/meet_injector.js` | Coordinates the Meet page |
+| `modules/calendar_api.js` | Finds the matching Google Calendar event |
+| `modules/overlay_renderer.js` | Draws the floating timer box |
+| `modules/reaction_vote.js` | Watches vote reactions and counts them |
+| `modules/vote_modal_renderer.js` | Draws vote popups |
+| `modules/ejector.js` | Leaves or ends the meeting |
+| `modules/timer.js` | Calculates time left |
+
+---
+
+## Background flow: the hidden brain
+
+`background/service_worker.js` is like the teacher’s desk in the classroom.  
+It does not show much on screen, but it coordinates important work:
+
+- gets Google login tokens through `auth_service.js`
+- asks Google Calendar for meeting data
+- sends emails through `gmail_service.js`
+- saves settings and meeting state through `storage.js`
+- listens for alarms when time is up
+- handles the shared vote logic
+
+### Files involved
+
+| File | Job |
+| --- | --- |
+| `background/service_worker.js` | Main background coordinator |
+| `modules/auth_service.js` | Gets Google OAuth tokens |
+| `modules/gmail_service.js` | Sends Gmail messages |
+| `modules/storage.js` | Saves settings and sessions |
+| `modules/voter.js` | Stores and checks vote results |
+| `modules/messaging.js` | Sends messages between files |
+
+---
+
+## Folder guide
+
+| Folder | What lives there |
+| --- | --- |
+| `background/` | The always-ready background brain |
+| `content/` | Scripts that run inside Google pages |
+| `modules/` | Small reusable pieces, each with one main job |
+| `popup/` | The little settings window |
+| `ui/` | Shared styles and small UI placeholders |
+| `utils/` | Tiny helper tools used by other files |
+
+---
+
+## Easy way to understand the code
+
+If you are reading the project for the first time, use this order:
+
+1. `manifest.json`  
+   See what Chrome starts.
+
+2. `content/calendar_injector.js`  
+   Learn the guest-purpose flow.
+
+3. `modules/calendar_guard.js`  
+   See how new guests are detected.
+
+4. `modules/calendar_description.js`  
+   See how reasons are written into the Calendar description.
+
+5. `content/meet_injector.js`  
+   Learn the Meet page flow.
+
+6. `modules/reaction_vote.js` and `modules/vote_modal_renderer.js`  
+   See how the voting works.
+
+7. `background/service_worker.js`  
+   Understand how the background brain connects everything.
+
+---
+
+## Why the code is split this way
+
+The project now follows a simple rule:
+
+> **One file should have one main reason to change.**
+
+Examples:
+
+- If the vote popup design changes, edit `vote_modal_renderer.js`
+- If Google Calendar changes its description box, edit `calendar_description.js`
+- If Gmail sending changes, edit `gmail_service.js`
+- If the Calendar guest flow changes, edit `calendar_injector.js`
+
+This is called **Single Responsibility Principle**, but the child-friendly version is:
+
+> **Each helper should have one clear job.**
+
+---
 
 ## Run locally
 
@@ -77,15 +223,17 @@ Google Meet
 4. Click **Load unpacked**.
 5. Select this project folder.
 
-You can also use:
+You can also run:
 
 ```bash
 ./setup.command
 ```
 
+---
+
 ## Google setup needed
 
-For Calendar lookup and Gmail sending to work, you still need your own Google OAuth setup:
+For Calendar lookup and Gmail sending to work, you need your own Google setup:
 
 1. Create a Google Cloud project.
 2. Enable the Google Calendar API.
@@ -95,6 +243,9 @@ For Calendar lookup and Gmail sending to work, you still need your own Google OA
 6. Reload the extension in Chrome.
 7. Open the extension popup and click **Connect Calendar**.
 
+---
+
 ## Important note
 
-MeetReaper depends on Google Meet and Google Calendar page structure. If Google changes their HTML, some selectors may need updating later.
+MeetReaper works by looking at Google Meet and Google Calendar pages.  
+If Google changes how those pages are built, some selectors may need to be updated later.

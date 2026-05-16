@@ -61,12 +61,13 @@ export function getVoteTally(session) {
 }
 
 /**
- * Checks whether the >50% "waste of time" threshold is met.
+ * Checks whether the configured "waste of time" threshold is met.
  * @param {VoteSession} session - The current vote session.
+ * @param {number} [thresholdPercent=50] - Percentage required to trigger the result.
  * @returns {boolean} True if the threshold is met.
  */
-export function isWasteThresholdMet(session) {
-  return session.yesVotes / session.totalParticipants > 0.5;
+export function isWasteThresholdMet(session, thresholdPercent = 50) {
+  return (session.yesVotes / session.totalParticipants) * 100 > thresholdPercent;
 }
 
 /**
@@ -81,8 +82,9 @@ export function isVoteExpired(session) {
 /**
  * Closes the VoteSession as concluded (evaluates threshold).
  * @param {VoteSession} session - The current vote session.
+ * @param {number} [thresholdPercent=50] - Percentage required to trigger the result.
  * @returns {VoteSession} The updated session with the 'triggered' flag set.
  */
-export function concludeVoteSession(session) {
-  return { ...session, triggered: isWasteThresholdMet(session) };
+export function concludeVoteSession(session, thresholdPercent = 50) {
+  return { ...session, triggered: isWasteThresholdMet(session, thresholdPercent) };
 }

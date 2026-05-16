@@ -28,6 +28,8 @@ function toMeetingSession(event, meetingId, settings) {
   return {
     meetingId,
     meetingCode: meetingId,
+    startsAt: start,
+    scheduledEndsAt: end,
     scheduledDuration: end - start,
     joinedAt: Date.now(),
     endsAt: end + settings.autoKillGraceSecs * 1000,

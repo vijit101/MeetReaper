@@ -45,6 +45,7 @@ export async function endMeetingForAll() {
     endForAllButton.click();
   } catch (error) {
     logger.warn('Could not end meeting for everyone, falling back to leave', error);
+    await leaveMeeting();
   }
 }
 
@@ -70,7 +71,7 @@ export function showEjectCountdown(countdownSecs, onConfirm, onCancel) {
   const toast = createElement(`
     <div id="meetreaper-countdown" class="meetreaper-toast">
       <strong>Meeting ending in <span>${countdownSecs}</span>s…</strong>
-      ${isHost() ? '<button type="button">Cancel</button>' : ''}
+      ${onCancel ? '<button type="button">Cancel</button>' : ''}
     </div>
   `);
   document.body.append(toast);

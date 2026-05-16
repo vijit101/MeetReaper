@@ -117,7 +117,13 @@ export function showPurposeModal(email, onConfirm, onSkip) {
         <option>FYI / optional</option>
         <option>Other</option>
       </select>
-      <input type="text" id="meetreaper-custom-reason" placeholder="Enter custom reason..." style="display: none; margin-top: 8px; width: 100%; box-sizing: border-box;" />
+      <input
+        type="text"
+        id="meetreaper-custom-reason"
+        class="meetreaper-input"
+        placeholder="Enter custom reason..."
+        hidden
+      />
       <label style="display: block; margin-top: 8px;"><input type="checkbox" checked> They need to be there</label>
       <div style="margin-top: 12px;"><button data-skip>Skip</button><button data-confirm>Confirm</button></div>
     </aside>
@@ -129,10 +135,10 @@ export function showPurposeModal(email, onConfirm, onSkip) {
   
   select.addEventListener('change', () => {
     if (select.value === 'Other') {
-      customInput.style.display = 'block';
+      customInput.hidden = false;
       customInput.focus();
     } else {
-      customInput.style.display = 'none';
+      customInput.hidden = true;
     }
   });
 

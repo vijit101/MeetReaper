@@ -22,12 +22,22 @@ export function getRemainingMs(session) {
 }
 
 /**
- * Returns elapsed time since joining as a formatted string.
+ * Returns elapsed time since the scheduled meeting start when known,
+ * otherwise falls back to time since the user joined.
  * @param {MeetingSession} session - The current session.
  * @returns {string} Elapsed time string.
  */
 export function getElapsedLabel(session) {
-  return formatMsToLabel(Date.now() - session.joinedAt);
+  return formatMsToLabel(Date.now() - (session.startsAt ?? session.joinedAt));
+}
+
+/**
+ * Returns the scheduled meeting duration as a formatted string.
+ * @param {MeetingSession} session - The current session.
+ * @returns {string} Total scheduled duration, or "--:--" when unknown.
+ */
+export function getTotalLabel(session) {
+  return session?.scheduledDuration ? formatMsToLabel(session.scheduledDuration) : '--:--';
 }
 
 /**

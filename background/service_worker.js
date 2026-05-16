@@ -17,16 +17,8 @@ import {
   concludeVoteSession,
 } from '../modules/voter.js';
 import { fetchMeetingSessionFromCalendar } from '../modules/calendar_api.js';
-
-/**
- * Retrieves the Google Calendar OAuth token.
- * @param {boolean} [interactive=false] - Whether to prompt the user if unauthenticated.
- * @returns {Promise<string|null>} The auth token, or null if unauthenticated.
- */
-async function getCalendarToken(interactive = false) {
-  const result = await chrome.identity.getAuthToken({ interactive });
-  return result?.token ?? null;
-}
+import { getGoogleToken } from '../modules/auth_service.js';
+import { sendGmail } from '../modules/gmail_service.js';
 
 /**
  * Arms the Chrome alarm for the auto-kill feature.
@@ -44,7 +36,7 @@ onBackgroundMessage('GET_SESSION', async ({ meetingId }) => {
   const settings = await getSettings();
   if (!settings.autoKillEnabled) return null;
   try {
-    const token = await getCalendarToken(false);
+    const token = await getGoogleToken(false);
     if (!token) return { authRequired: true };
     const session = await fetchMeetingSessionFromCalendar(meetingId, token, settings);
     if (!session) return null;
@@ -57,77 +49,9 @@ onBackgroundMessage('GET_SESSION', async ({ meetingId }) => {
 });
 
 onBackgroundMessage('AUTHORIZE_CALENDAR', async () => {
-  const token = await getCalendarToken(true);
+  const token = await getGoogleToken(true);
   return { authorized: Boolean(token) };
 });
-
-/**
- * Sends a raw email using the Gmail API.
- * @param {string} to - Recipient email.
- * @param {string} subject - Email subject.
- * @param {string} body - Email body text.
- * @returns {Promise<boolean>} True if successful.
- */
-async function sendGmail(to, subject, body) {
-  try {
-    if (
-      chrome.runtime.getManifest().oauth2?.client_id?.startsWith('REPLACE_WITH_YOUR_OAUTH_CLIENT_ID')
-    ) {
-      return { success: false, reason: 'oauth_not_configured' };
-    }
-    let token = await getCalendarToken(false);
-    if (!token) token = await getCalendarToken(true);
-    if (!token) return { success: false, reason: 'authorization_required' };
-
-    const emailLines = [
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/plain; charset=utf-8',
-      '',
-      body
-    ];
-    const emailStr = emailLines.join('\\r\\n');
-    
-    // Base64url encode the string
-    const utf8Bytes = new TextEncoder().encode(emailStr);
-    // Note: btoa only works with Latin-1 in browsers, but TextEncoder output requires manual char string construction for utf-8
-    const binary = Array.from(utf8Bytes).map(byte => String.fromCharCode(byte)).join('');
-    const base64 = btoa(binary);
-    const base64Url = base64.replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
-
-    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ raw: base64Url })
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      await chrome.identity.removeCachedAuthToken({ token });
-      token = await getCalendarToken(true);
-      if (!token) return { success: false, reason: 'authorization_required' };
-      const retryResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ raw: base64Url })
-      });
-      return retryResponse.ok
-        ? { success: true }
-        : { success: false, reason: `gmail_api_${retryResponse.status}` };
-    }
-    return response.ok
-      ? { success: true }
-      : { success: false, reason: `gmail_api_${response.status}` };
-  } catch (error) {
-    console.error('[MeetReaper] Failed to send email via Gmail API', error);
-    return { success: false, reason: 'unexpected_error' };
-  }
-}
 
 onBackgroundMessage('SEND_EMAIL', async ({ to, subject, body }) => {
   return sendGmail(to, subject, body);
@@ -145,11 +69,12 @@ onBackgroundMessage('START_VOTE', async ({ meetingId, participantCount = 1 }) =>
 onBackgroundMessage('CAST_VOTE', async ({ meetingId, token, vote }) => {
   const session = await getVoteSession(meetingId);
   if (!session) return { accepted: false };
+  const settings = await getSettings();
   const accepted = castVote(session, token, vote);
   await saveVoteSession(session);
   const tally = getVoteTally(session);
   await broadcastToMeetTabs({ type: 'VOTE_UPDATE', payload: { session, tally } });
-  if (isWasteThresholdMet(session)) {
+  if (isWasteThresholdMet(session, settings.voteThresholdPercent)) {
     await broadcastToMeetTabs({
       type: 'MEETING_ENDED',
       payload: { meetingId, reason: 'vote', tally },
@@ -160,10 +85,11 @@ onBackgroundMessage('CAST_VOTE', async ({ meetingId, token, vote }) => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name.startsWith('vote_timeout_')) {
+    const settings = await getSettings();
     const all = await chrome.storage.local.get(null);
     const vote = Object.values(all).find((value) => value?.voteId && `vote_timeout_${value.voteId}` === alarm.name);
     if (!vote) return;
-    const concluded = concludeVoteSession(vote);
+    const concluded = concludeVoteSession(vote, settings.voteThresholdPercent);
     await saveVoteSession(concluded);
     await broadcastToMeetTabs({
       type: concluded.triggered ? 'MEETING_ENDED' : 'VOTE_ENDED',
