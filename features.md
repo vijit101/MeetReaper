@@ -35,3 +35,9 @@ Invite Guard should build a lightweight purpose map while the organizer adds gue
 * Prompt once for each newly added attendee, in the same order they were added.
 * Ignore Calendar page noise and pre-existing email-like DOM values so new events do not start with bogus attendee prompts.
 * Surface each attendee's declared role beside their chip so the organizer can quickly see who is required, optional, or redundant before sending the invite.
+
+### 8. "My Agenda Is Done" Host Nudge
+Sometimes a participant has already finished the part they were invited for and no longer needs to stay for the rest of the meeting.
+* Add a polite **"My agenda is done"** action that lets a participant nudge the host without interrupting the room.
+* The host should receive a quiet prompt showing who is asking to leave and why they were originally invited.
+* This helps people bounce once their contribution is complete instead of staying trapped in a meeting that no longer needs them.
