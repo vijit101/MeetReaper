@@ -163,5 +163,42 @@
     showNextPurposePrompt();
   });
 
+  // Pre-open the description box as soon as the event editor renders it.
+  // We watch for [jsname="OXFAed"] button (the outer description section toggle)
+  // to appear in the DOM, then immediately expand both nested sections.
+  // This fires much faster than any fixed timer, ensuring the contenteditable
+  // is ready before the user finishes adding their first guest.
+  const preOpenDescription = () => {
+    if (findDescriptionField()) return; // already open, nothing to do
+
+    const outerBtn = document.querySelector('[jsname="OXFAed"] button');
+    if (!outerBtn) return; // editor not rendered yet
+
+    // Outer section: expand if collapsed
+    if (outerBtn.getAttribute('aria-expanded') === 'false') {
+      reactClick(outerBtn);
+    }
+    // Inner "Add description" sub-section: expand once outer has rendered it
+    setTimeout(() => expandIfCollapsed('Zqjuqb'), 400);
+  };
+
+  // Try immediately (in case editor is already rendered on page load)
+  preOpenDescription();
+
+  // Also watch the DOM — fires the moment [jsname="OXFAed"] button appears
+  const descInitObserver = new MutationObserver(() => {
+    if (findDescriptionField()) {
+      descInitObserver.disconnect(); // already open, stop watching
+      return;
+    }
+    const outerBtn = document.querySelector('[jsname="OXFAed"] button');
+    if (outerBtn) {
+      descInitObserver.disconnect(); // found it, open and stop
+      preOpenDescription();
+    }
+  });
+  descInitObserver.observe(document.documentElement, { childList: true, subtree: true });
+
   window.addEventListener('beforeunload', calendarGuard.clearAttendeeRecords);
 })();
+
