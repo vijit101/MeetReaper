@@ -64,7 +64,7 @@ export function isHost() {
  * @param {number} countdownSecs - Number of seconds to countdown.
  * @param {Function} onConfirm - Called when the countdown completes.
  * @param {Function} [onCancel] - Called if the user cancels the countdown.
- * @returns {void}
+ * @returns {Function} Cancels the countdown.
  */
 export function showEjectCountdown(countdownSecs, onConfirm, onCancel) {
   document.getElementById('meetreaper-countdown')?.remove();
@@ -86,9 +86,11 @@ export function showEjectCountdown(countdownSecs, onConfirm, onCancel) {
       onConfirm();
     }
   }, 1000);
-  toast.querySelector('button')?.addEventListener('click', () => {
+  const cancel = () => {
     clearInterval(interval);
     toast.remove();
     onCancel?.();
-  });
+  };
+  toast.querySelector('button')?.addEventListener('click', cancel);
+  return cancel;
 }

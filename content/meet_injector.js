@@ -50,14 +50,14 @@
    * Initiates the end meeting sequence with a countdown.
    * @param {boolean} [announce=false] - Whether to explain the decision in Meet chat.
    */
-  const endMeeting = async (announce = false) => {
+  const endMeeting = (announce = false) => {
     if (announce) {
-      await meetChat.sendChatMessage(
+      meetChat.sendChatMessage(
         'MeetReaper: This meeting is being closed because the majority sees no value in continuing the current agenda, or feels the discussion is no longer aligned with the room.',
       );
     }
-    ejector.showEjectCountdown(
-      5,
+    return ejector.showEjectCountdown(
+      10,
       () => {
         if (timerIntervalId) clearInterval(timerIntervalId);
         ejector.endMeetingForAll();
@@ -82,9 +82,17 @@
       },
       onComplete: ({ tally, yesCount, participantCount }) => {
         const shouldEnd = (yesCount / participantCount) * 100 > settings.voteThresholdPercent;
-        voteModalRenderer.showVoteResult(tally, shouldEnd);
-        if (shouldEnd) endMeeting(true);
-        else overlayRenderer.showIdleState(overlay);
+        if (shouldEnd) {
+          const cancelClose = endMeeting(true);
+          voteModalRenderer.showVoteResult(tally, {
+            isEnding: true,
+            countdownSecs: 10,
+            onCancel: cancelClose,
+          });
+          return;
+        }
+        voteModalRenderer.showVoteResult(tally, { isEnding: false });
+        overlayRenderer.showIdleState(overlay);
       },
     });
   };

@@ -30,16 +30,30 @@ async function armAutoKillAlarm(session) {
   chrome.alarms.create(`autokill_${session.meetingId}`, { when: session.endsAt });
 }
 
+/**
+ * Checks whether a cached session has enough Calendar timing data for the overlay.
+ * @param {Object|null} session
+ * @returns {boolean}
+ */
+function hasCalendarTiming(session) {
+  return Boolean(
+    session
+    && Number.isFinite(session.startsAt)
+    && Number.isFinite(session.scheduledEndsAt)
+    && session.scheduledDuration > 0,
+  );
+}
+
 onBackgroundMessage('GET_SESSION', async ({ meetingId }) => {
   const existing = await getSession(meetingId);
-  if (existing) return existing;
+  if (hasCalendarTiming(existing)) return existing;
   const settings = await getSettings();
   if (!settings.autoKillEnabled) return null;
   try {
     const token = await getGoogleToken(false);
     if (!token) return { authRequired: true };
     const session = await fetchMeetingSessionFromCalendar(meetingId, token, settings);
-    if (!session) return null;
+    if (!session) return existing ?? null;
     await saveSession(session);
     await armAutoKillAlarm(session);
     return session;

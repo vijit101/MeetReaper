@@ -1,4 +1,4 @@
-import { formatMsToLabel } from '../utils/time_utils.js';
+import { formatDurationSummary, formatMsToLabel } from '../utils/time_utils.js';
 
 const timers = new Map();
 
@@ -37,7 +37,7 @@ export function getElapsedLabel(session) {
  * @returns {string} Total scheduled duration, or "--:--" when unknown.
  */
 export function getTotalLabel(session) {
-  return session?.scheduledDuration ? formatMsToLabel(session.scheduledDuration) : '--:--';
+  return session?.scheduledDuration ? formatDurationSummary(session.scheduledDuration) : '--:--';
 }
 
 /**

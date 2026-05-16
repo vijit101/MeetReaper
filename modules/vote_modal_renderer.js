@@ -30,9 +30,12 @@ export function showVoteModal(onVote) {
 /**
  * Shows the final vote tally before the meeting closes or returns to idle state.
  * @param {{ yesPercent: number, totalVoted: number }} tally
- * @param {boolean} isEnding - Whether this result will end the meeting.
+ * @param {Object} options
+ * @param {boolean} options.isEnding - Whether this result will end the meeting.
+ * @param {number} [options.countdownSecs=10] - Seconds before the call closes.
+ * @param {Function} [options.onCancel] - Called when the user cancels the close flow.
  */
-export function showVoteResult(tally, isEnding) {
+export function showVoteResult(tally, { isEnding, countdownSecs = 10, onCancel } = {}) {
   document.getElementById('meetreaper-vote-modal')?.remove();
   document.getElementById('meetreaper-vote-result')?.remove();
   const modal = createElement(`
@@ -46,12 +49,32 @@ export function showVoteResult(tally, isEnding) {
       <p class="meetreaper-result-countdown">
         ${
           isEnding
-            ? 'Majority voted to close this meeting. A short cancel window is available before it ends.'
+            ? `Majority voted to close this meeting. Closing in <span>${countdownSecs}</span>s.`
             : 'The meeting keeps its vibe for now.'
         }
       </p>
+      ${isEnding ? '<button data-cancel-close type="button">Cancel close</button>' : ''}
     </div>
   `);
   document.body.append(modal);
-  setTimeout(() => modal.remove(), isEnding ? 5000 : 3000);
+  if (!isEnding) {
+    setTimeout(() => modal.remove(), 3000);
+    return;
+  }
+
+  let remaining = countdownSecs;
+  const label = modal.querySelector('.meetreaper-result-countdown span');
+  const interval = setInterval(() => {
+    remaining -= 1;
+    label.textContent = remaining;
+    if (remaining <= 0) {
+      clearInterval(interval);
+      modal.remove();
+    }
+  }, 1000);
+  modal.querySelector('[data-cancel-close]').addEventListener('click', () => {
+    clearInterval(interval);
+    modal.remove();
+    onCancel?.();
+  });
 }

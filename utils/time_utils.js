@@ -33,3 +33,17 @@ export function humanizeRemaining(ms) {
   const mins = Math.ceil(ms / 60_000);
   return `${mins} min${mins === 1 ? '' : 's'} remaining`;
 }
+
+/**
+ * Formats a scheduled duration for compact UI labels such as "1 hr" or "1 hr 30 min".
+ * @param {number} ms - Duration in milliseconds.
+ * @returns {string}
+ */
+export function formatDurationSummary(ms) {
+  const totalMinutes = Math.round(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (!hours) return `${minutes} min`;
+  if (!minutes) return `${hours} hr${hours === 1 ? '' : 's'}`;
+  return `${hours} hr${hours === 1 ? '' : 's'} ${minutes} min`;
+}
