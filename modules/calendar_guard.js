@@ -12,51 +12,79 @@ function getNodeEmail(node) {
 }
 
 /**
- * Checks if a given email is currently present as an attendee chip in the DOM.
- * Used to verify a guest wasn't deleted before the modal fires.
+ * Returns the email from a node only if it is a confirmed guest chip.
+ * A confirmed guest chip always has a sibling remove/delete button.
+ * This filters out hover cards, autocomplete suggestions, and organizer cards.
+ * @param {Element} node
+ * @returns {string|null}
+ */
+function getChipEmail(node) {
+  const email = getNodeEmail(node);
+  if (!email) return null;
+  // Walk up to find the chip's list item container
+  const chip = node.closest('li, [role="listitem"], [data-chip-id]') || node.parentElement;
+  // A real confirmed chip has a remove/delete button
+  const hasRemoveBtn = chip?.querySelector(
+    '[aria-label*="remove" i], [aria-label*="delete" i], [data-remove], [jsname]'
+  ) !== null;
+  // Also accept if the chip itself has aria-label containing 'remove'
+  const chipAriaLabel = chip?.getAttribute('aria-label') || '';
+  const isConfirmedChip = hasRemoveBtn || /remove/i.test(chipAriaLabel);
+  return isConfirmedChip ? email : null;
+}
+
+/**
+ * Returns all confirmed guest chip emails currently in the DOM.
+ * @returns {string[]}
+ */
+function getConfirmedGuestEmails() {
+  return [...document.querySelectorAll('[data-email], [email], [data-hovercard-id]')]
+    .map(getChipEmail)
+    .filter(Boolean);
+}
+
+/**
+ * Checks if a given email is currently in the confirmed guest chip list.
  * @param {string} email
  * @returns {boolean}
  */
 export function isEmailInDOM(email) {
-  return [...document.querySelectorAll('[data-email], [email], [data-hovercard-id]')]
-    .some((node) => getNodeEmail(node) === email);
+  return getConfirmedGuestEmails().includes(email);
 }
 
 /**
- * Watches the Calendar event editor DOM for newly-added attendees using a debounced observer.
+ * Watches only confirmed guest chips (those with a remove button) for newly-added attendees.
+ * This prevents false positives from hovercard links, suggestions, and the organizer chip.
  * @param {Function} onAttendeeAdded - Callback called with the attendee email.
  * @returns {Function} A function to disconnect the observer.
  */
 export function observeAttendeeList(onAttendeeAdded) {
   const seenEmails = new Set();
   let scanTimeout = null;
-  let isPrimingScan = true;
-  
-  const scan = () => {
+
+  const scan = (isPriming = false) => {
     scanTimeout = null;
-    const candidates = [...document.querySelectorAll('[data-email], [email], [data-hovercard-id]')];
-    for (const node of candidates) {
-      const email = getNodeEmail(node);
-      if (!email || seenEmails.has(email)) continue;
+    const emails = getConfirmedGuestEmails();
+    for (const email of emails) {
+      if (seenEmails.has(email)) continue;
       seenEmails.add(email);
-      if (isPrimingScan) continue;
+      if (isPriming) continue; // silently baseline existing guests
       onAttendeeAdded(email);
     }
-    isPrimingScan = false;
   };
-  
+
   const debouncedScan = () => {
-    if (!scanTimeout) {
-      scanTimeout = setTimeout(scan, 300);
-    }
+    if (scanTimeout) clearTimeout(scanTimeout);
+    scanTimeout = setTimeout(() => scan(false), 400);
   };
-  
+
   const observer = new MutationObserver(debouncedScan);
   observer.observe(document.documentElement, { childList: true, subtree: true });
-  // Delay the priming scan to ensure the organizer's own chip
-  // (and any pre-existing guests) are fully rendered before we
-  // establish the baseline. This prevents own-email false positives.
-  setTimeout(scan, 1500);
+
+  // Prime the baseline after a delay so all existing chips (organizer, pre-existing
+  // guests) are rendered and silently absorbed before we start reporting new ones.
+  setTimeout(() => scan(true), 1500);
+
   return () => {
     if (scanTimeout) clearTimeout(scanTimeout);
     observer.disconnect();
